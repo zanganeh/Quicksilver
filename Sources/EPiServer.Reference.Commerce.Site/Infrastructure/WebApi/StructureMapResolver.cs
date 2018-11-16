@@ -14,11 +14,7 @@ namespace EPiServer.Reference.Commerce.Site.Infrastructure.WebApi
         public StructureMapResolver(IContainer container)
             : base(container)
         {
-            if (container == null)
-            {
-                throw new ArgumentNullException("container");
-            }
-            _container = container;
+            _container = container ?? throw new ArgumentNullException("container");
 
             _container.Inject(typeof(IHttpControllerActivator), this);
         }

@@ -1,0 +1,16 @@
+{
+    "name": "bot-authentication-msgraph",
+    "description": "",
+    "services": [
+        {
+            "type": "endpoint",
+            "endpoint": "https://quicksilver-bot.azurewebsites.net/api/messages",
+            "appId": "3796dcbd-ea29-4206-a465-8d5333d84e49",
+            "appPassword": "ixygVDMF464[vxfYFL61@[^",
+            "id": "1",
+            "name": "development"
+        }
+    ],
+    "padlock": "",
+    "version": "2.0"
+}

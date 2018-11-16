@@ -18,6 +18,12 @@ using System.Threading.Tasks;
 using System.Web;
 using EPiServer.Framework.Modules;
 using EPiServer.Shell;
+using System.Configuration;
+using Auth0.Owin;
+using Microsoft.Owin.Security.Jwt;
+using Microsoft.Owin.Security;
+using System.IdentityModel.Tokens;
+using System.Web.Http;
 
 [assembly: OwinStartupAttribute(typeof(EPiServer.Reference.Commerce.Site.Infrastructure.Owin.Startup))]
 namespace EPiServer.Reference.Commerce.Site.Infrastructure.Owin
@@ -28,6 +34,32 @@ namespace EPiServer.Reference.Commerce.Site.Infrastructure.Owin
 
         public void Configuration(IAppBuilder app)
         {
+            HttpConfiguration config = new HttpConfiguration();
+
+            config.Routes.MapHttpRoute(
+                name: "DefaultApi",
+                routeTemplate: "api/{controller}/{id}",
+                defaults: new { id = RouteParameter.Optional }
+            );
+
+            app.UseWebApi(config);
+
+            var domain = $"https://{ConfigurationManager.AppSettings["Auth0Domain"]}/";
+            var apiIdentifier = ConfigurationManager.AppSettings["Auth0ApiIdentifier"];
+
+            var keyResolver = new OpenIdConnectSigningKeyResolver(domain);
+            app.UseJwtBearerAuthentication(
+                new JwtBearerAuthenticationOptions
+                {
+                    AuthenticationMode = AuthenticationMode.Active,
+                    TokenValidationParameters = new TokenValidationParameters()
+                    {
+                        ValidAudience = apiIdentifier,
+                        ValidIssuer = domain,
+                        IssuerSigningKeyResolver = (token, securityToken, kid, parameters) => keyResolver.GetSigningKey(kid)
+                    }
+                });
+
             // For more information on configuring authentication, please visit http://go.microsoft.com/fwlink/?LinkId=301864
 
             // Configure the db context, user manager and signin manager to use a single instance per request.

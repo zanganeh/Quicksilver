@@ -21,6 +21,7 @@ using Microsoft.Owin.Security;
 using Newtonsoft.Json;
 using System.Web;
 using System.Web.Http;
+using System.Web.Http.Dispatcher;
 using System.Web.Mvc;
 using System.Web.Routing;
 using System.Web.WebPages;
@@ -69,14 +70,14 @@ namespace EPiServer.Reference.Commerce.Site.Infrastructure
             services.AddTransient<IOrderFormCalculator, SiteOrderFormCalculator>(); // TODO: should remove this configuration and calculator class after COM-2434 was resolved
 
             
-            services.AddTransient<IOwinContext>(locator => HttpContext.Current.GetOwinContext());
-            services.AddTransient<ApplicationUserManager>(locator => locator.GetInstance<IOwinContext>().GetUserManager<ApplicationUserManager>());
-            services.AddTransient<ApplicationSignInManager>(locator => locator.GetInstance<IOwinContext>().Get<ApplicationSignInManager>());
-            services.AddTransient<IAuthenticationManager>(locator => locator.GetInstance<IOwinContext>().Authentication);
+            services.AddTransient(locator => HttpContext.Current.GetOwinContext());
+            services.AddTransient(locator => locator.GetInstance<IOwinContext>().GetUserManager<ApplicationUserManager>());
+            services.AddTransient(locator => locator.GetInstance<IOwinContext>().Get<ApplicationSignInManager>());
+            services.AddTransient(locator => locator.GetInstance<IOwinContext>().Authentication);
 
             services.AddTransient<IModelBinderProvider, ModelBinderProvider>();
             services.AddHttpContextOrThreadScoped<SiteContext, CustomCurrencySiteContext>();
-            services.AddTransient<HttpContextBase>(locator => HttpContext.Current.ContextBaseOrNull());
+            services.AddTransient(locator => HttpContext.Current.ContextBaseOrNull());
 
             DependencyResolver.SetResolver(new StructureMapDependencyResolver(context.Container));
             GlobalConfiguration.Configure(config =>
