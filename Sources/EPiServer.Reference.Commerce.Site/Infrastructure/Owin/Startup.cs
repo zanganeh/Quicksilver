@@ -2,27 +2,18 @@
 using EPiServer.Reference.Commerce.Shared.Models.Identity;
 using EPiServer.Security;
 using EPiServer.ServiceLocation;
+using EPiServer.Shell;
 using EPiServer.Web.Routing;
 using Microsoft.AspNet.Identity;
 using Microsoft.AspNet.Identity.Owin;
 using Microsoft.Owin;
 using Microsoft.Owin.Security.Cookies;
-using Microsoft.Owin.Security.Facebook;
-using Microsoft.Owin.Security.Google;
-using Microsoft.Owin.Security.MicrosoftAccount;
-using Microsoft.Owin.Security.Twitter;
+using Microsoft.Owin.Security.OAuth;
 using Owin;
 using System;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Web;
-using EPiServer.Framework.Modules;
-using EPiServer.Shell;
-using System.Configuration;
-using Auth0.Owin;
-using Microsoft.Owin.Security.Jwt;
-using Microsoft.Owin.Security;
-using System.IdentityModel.Tokens;
 using System.Web.Http;
 
 [assembly: OwinStartupAttribute(typeof(EPiServer.Reference.Commerce.Site.Infrastructure.Owin.Startup))]
@@ -34,32 +25,6 @@ namespace EPiServer.Reference.Commerce.Site.Infrastructure.Owin
 
         public void Configuration(IAppBuilder app)
         {
-            HttpConfiguration config = new HttpConfiguration();
-
-            config.Routes.MapHttpRoute(
-                name: "DefaultApi",
-                routeTemplate: "api/{controller}/{id}",
-                defaults: new { id = RouteParameter.Optional }
-            );
-
-            app.UseWebApi(config);
-
-            var domain = $"https://{ConfigurationManager.AppSettings["Auth0Domain"]}/";
-            var apiIdentifier = ConfigurationManager.AppSettings["Auth0ApiIdentifier"];
-
-            var keyResolver = new OpenIdConnectSigningKeyResolver(domain);
-            app.UseJwtBearerAuthentication(
-                new JwtBearerAuthenticationOptions
-                {
-                    AuthenticationMode = AuthenticationMode.Active,
-                    TokenValidationParameters = new TokenValidationParameters()
-                    {
-                        ValidAudience = apiIdentifier,
-                        ValidIssuer = domain,
-                        IssuerSigningKeyResolver = (token, securityToken, kid, parameters) => keyResolver.GetSigningKey(kid)
-                    }
-                });
-
             // For more information on configuring authentication, please visit http://go.microsoft.com/fwlink/?LinkId=301864
 
             // Configure the db context, user manager and signin manager to use a single instance per request.
@@ -67,13 +32,21 @@ namespace EPiServer.Reference.Commerce.Site.Infrastructure.Owin
             app.CreatePerOwinContext<ApplicationUserManager>(ApplicationUserManager.Create);
             app.CreatePerOwinContext<ApplicationSignInManager>(ApplicationSignInManager.Create);
 
+            app.UseOAuthBearerTokens(new OAuthAuthorizationServerOptions
+            {
+                TokenEndpointPath = new PathString("/Token"),
+                AuthorizeEndpointPath = new PathString("/Login"),
+                Provider = new CustomOAuthAuthorizationServerProvider(),
+                AllowInsecureHttp = true
+            });
+
             // Enable the application to use a cookie to store information for the signed in user
             // and to use a cookie to temporarily store information about a user logging in with a third party login provider.
             // Configure the sign in cookie.
             app.UseCookieAuthentication(new CookieAuthenticationOptions
             {
                 AuthenticationType = DefaultAuthenticationTypes.ApplicationCookie,
-                LoginPath = new PathString("/Login"),
+                LoginPath = new PathString("/Account/Login"),
                 Provider = new CookieAuthenticationProvider
                 {
                     // Enables the application to validate the security stamp when the user logs in.
@@ -87,6 +60,60 @@ namespace EPiServer.Reference.Commerce.Site.Infrastructure.Owin
             });
 
             app.UseExternalSignInCookie(DefaultAuthenticationTypes.ExternalCookie);
+
+            //string auth0Domain = ConfigurationManager.AppSettings["auth0:Domain"];
+            //string auth0ClientId = ConfigurationManager.AppSettings["auth0:ClientId"];
+            //string auth0ClientSecret = ConfigurationManager.AppSettings["auth0:ClientSecret"];
+            //string auth0RedirectUri = ConfigurationManager.AppSettings["auth0:RedirectUri"];
+            //string auth0PostLogoutRedirectUri = ConfigurationManager.AppSettings["auth0:PostLogoutRedirectUri"];
+
+            //app.UseOpenIdConnectAuthentication(new OpenIdConnectAuthenticationOptions
+            //{
+            //    AuthenticationType = "Auth0",
+
+            //    Authority = $"https://{auth0Domain}",
+
+            //    ClientId = auth0ClientId,
+            //    ClientSecret = auth0ClientSecret,
+
+            //    RedirectUri = auth0RedirectUri,
+            //    PostLogoutRedirectUri = auth0PostLogoutRedirectUri,
+
+            //    ResponseType = OpenIdConnectResponseTypes.CodeIdToken,
+            //    Scope = "openid profile",
+
+            //    TokenValidationParameters = new TokenValidationParameters
+            //    {
+            //        NameClaimType = "name"
+            //    },
+
+            //    Notifications = new OpenIdConnectAuthenticationNotifications
+            //    {
+            //        RedirectToIdentityProvider = notification =>
+            //        {
+            //            if (notification.ProtocolMessage.RequestType == OpenIdConnectRequestType.LogoutRequest)
+            //            {
+            //                var logoutUri = $"https://{auth0Domain}/v2/logout?client_id={auth0ClientId}";
+
+            //                var postLogoutUri = notification.ProtocolMessage.PostLogoutRedirectUri;
+            //                if (!string.IsNullOrEmpty(postLogoutUri))
+            //                {
+            //                    if (postLogoutUri.StartsWith("/"))
+            //                    {
+            //                        // transform to absolute
+            //                        var request = notification.Request;
+            //                        postLogoutUri = request.Scheme + "://" + request.Host + request.PathBase + postLogoutUri;
+            //                    }
+            //                    logoutUri += $"&returnTo={ Uri.EscapeDataString(postLogoutUri)}";
+            //                }
+
+            //                notification.Response.Redirect(logoutUri);
+            //                notification.HandleResponse();
+            //            }
+            //            return Task.FromResult(0);
+            //        }
+            //    }
+            //});
 
             // Enables the application to temporarily store user information when they are verifying the second factor in the two-factor authentication process.
             app.UseTwoFactorSignInCookie(DefaultAuthenticationTypes.TwoFactorCookie, TimeSpan.FromMinutes(5));
@@ -113,6 +140,59 @@ namespace EPiServer.Reference.Commerce.Site.Infrastructure.Owin
             //EnableTwitterAccountLogin(app);
             //EnableFacebookAccountLogin(app);
             //EnableGoogleAccountLogin(app);
+
+            HttpConfiguration config = new HttpConfiguration();
+
+            config.Routes.MapHttpRoute(
+                name: "DefaultApi",
+                routeTemplate: "api/{controller}/{id}",
+                defaults: new { id = RouteParameter.Optional }
+            );
+
+            config.SuppressDefaultHostAuthentication();
+            config.Filters.Add(new HostAuthenticationFilter(OAuthDefaults.AuthenticationType));
+
+            app.UseWebApi(config);
+
+            //var domain = $"https://{ConfigurationManager.AppSettings["Auth0Domain"]}/";
+            //var apiIdentifier = ConfigurationManager.AppSettings["Auth0ApiIdentifier"];
+
+            //var keyResolver = new OpenIdConnectSigningKeyResolver(domain);
+            //app.UseJwtBearerAuthentication(
+            //    new JwtBearerAuthenticationOptions
+            //    {
+            //        AuthenticationType = OAuthDefaults.AuthenticationType,
+            //        TokenValidationParameters = new TokenValidationParameters()
+            //        {
+            //            ValidAudience = "https://api.botframework.com",
+            //            ValidIssuer = "https://sts.windows.net/d6d49420-f39b-4df7-a1dc-d59a935871db/",
+            //            IssuerSigningKeyResolver = (token, securityToken, kid, parameters) => keyResolver.GetSigningKey(kid)
+            //        }
+            //    });
+
+            //app.UseOAuthBearerAuthentication(new OAuthBearerAuthenticationOptions
+            //{
+            //    Provider = new CustomBearerAuthenticationProvider()
+            //});
+
+            //PublicClientId = "self";
+            //OAuthOptions = new OAuthAuthorizationServerOptions
+            //{
+            //    TokenEndpointPath = new PathString("/Token"),
+            //    Provider = new AppOAuthProvider(PublicClientId),
+            //    AuthorizeEndpointPath = new PathString("/Account/ExternalLogin"),
+            //    AccessTokenExpireTimeSpan = TimeSpan.FromHours(4),
+            //    AllowInsecureHttp = true //Don't do this in production ONLY FOR DEVELOPING: ALLOW INSECURE HTTP!  
+            //};
+
+            //// Enable the application to use bearer tokens to authenticate users  
+            //app.UseOAuthBearerTokens(OAuthOptions);
+
+
+            //app.UseOAuthBearerAuthentication(new OAuthBearerAuthenticationOptions
+            //{
+            //});
+
         }
 
         /// <summary>

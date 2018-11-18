@@ -25,15 +25,15 @@ namespace EPiServer.Reference.Commerce.Bot
         {
             var commerceClient = GetAuthenticatedClient();
 
-            var tt = await commerceClient.api.card.add.Query(new { code }).Post();
+            var result = await commerceClient.api.card.add.Query(new { code }).Post();
+
         }
 
         private dynamic GetAuthenticatedClient()
         {
-            dynamic client = new RestClient(_url);
-            client.Headers(new { Authorization = "Bearer " + _token });
 
-            return client;
+            dynamic client = new RestClient(_url);
+            return client.Headers(new { Authorization = $"Bearer {_token}" });
         }
 
         public Task<IEnumerable<string>> ProductsAsync()

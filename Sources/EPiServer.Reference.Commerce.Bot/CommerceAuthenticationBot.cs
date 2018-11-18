@@ -29,7 +29,7 @@ namespace EPiServer.Reference.Commerce.Bot
                 throw new InvalidOperationException("ConnectionSettingName must be configured prior to running the bot.");
             }
 
-            _stateAccessors = accessors ?? throw new ArgumentNullException(nameof(accessors));
+           _stateAccessors = accessors ?? throw new ArgumentNullException(nameof(accessors));
             _dialogs = new DialogSet(_stateAccessors.ConversationDialogState);
             _dialogs.Add(OAuthHelpers.Prompt(ConnectionSettingName));
             _dialogs.Add(new ChoicePrompt("choicePrompt"));
@@ -111,13 +111,6 @@ namespace EPiServer.Reference.Commerce.Bot
             return heroCard;
         }
 
-        /// <summary>
-        /// Processes input and route to the appropriate step.
-        /// </summary>
-        /// <param name="turnContext">Provides the <see cref="ITurnContext"/> for the turn of the bot.</param>
-        /// <param name="cancellationToken" >(Optional) A <see cref="CancellationToken"/> that can be used by other objects
-        /// or threads to receive notice of cancellation.</param>
-        /// <returns>A <see cref="Task"/> representing the operation result of the operation.</returns>
         private async Task<DialogContext> ProcessInputAsync(ITurnContext turnContext, CancellationToken cancellationToken)
         {
             var dc = await _dialogs.CreateContextAsync(turnContext, cancellationToken);
@@ -199,7 +192,7 @@ namespace EPiServer.Reference.Commerce.Bot
 
             // Set the context if the message is not the magic code.
             if (activity.Type == ActivityTypes.Message &&
-                !Regex.IsMatch(activity.Text, @"(\d{6})"))
+                (!Regex.IsMatch(activity.Text, @"(\d{6})") || activity.Text.Contains("SKU")))
             {
                 await _stateAccessors.CommandState.SetAsync(step.Context, activity.Text, cancellationToken);
                 await _stateAccessors.UserState.SaveChangesAsync(step.Context, cancellationToken: cancellationToken);
