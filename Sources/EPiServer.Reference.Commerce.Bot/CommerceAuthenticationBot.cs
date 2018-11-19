@@ -19,8 +19,8 @@ namespace EPiServer.Reference.Commerce.Bot
             'card' to see your current card, 'signout' to sign out or 'help' to view the commands again. 
             Any other text will display your token.";
 
-        private readonly CommerceAuthenticationBotAccessors _stateAccessors;
-        private readonly DialogSet _dialogs;
+        private readonly CommerceAuthenticationBotAccessors stateAccessors;
+        private readonly DialogSet dialogs;
 
         public CommerceAuthenticationBot(CommerceAuthenticationBotAccessors accessors)
         {
@@ -29,17 +29,15 @@ namespace EPiServer.Reference.Commerce.Bot
                 throw new InvalidOperationException("ConnectionSettingName must be configured prior to running the bot.");
             }
 
-           _stateAccessors = accessors ?? throw new ArgumentNullException(nameof(accessors));
-            _dialogs = new DialogSet(_stateAccessors.ConversationDialogState);
-            _dialogs.Add(OAuthHelpers.Prompt(ConnectionSettingName));
-            _dialogs.Add(new ChoicePrompt("choicePrompt"));
-            _dialogs.Add(new WaterfallDialog("commerceDialog", new WaterfallStep[] { PromptStepAsync, ProcessStepAsync }));
+            stateAccessors = accessors ?? throw new ArgumentNullException(nameof(accessors));
+            dialogs = new DialogSet(stateAccessors.ConversationDialogState);
+            dialogs.Add(OAuthHelpers.Prompt(ConnectionSettingName));
+            dialogs.Add(new ChoicePrompt("choicePrompt"));
+            dialogs.Add(new WaterfallDialog("commerceDialog", new WaterfallStep[] { PromptStepAsync, ProcessStepAsync }));
         }
 
         public async Task OnTurnAsync(ITurnContext turnContext, CancellationToken cancellationToken = default(CancellationToken))
         {
-            DialogContext dc = null;
-
             switch (turnContext.Activity.Type)
             {
                 case ActivityTypes.Message:
@@ -54,7 +52,7 @@ namespace EPiServer.Reference.Commerce.Bot
                         throw new InvalidOperationException("The Invoke type is only valid onthe MSTeams channel.");
                     }
 
-                    dc = await _dialogs.CreateContextAsync(turnContext, cancellationToken);
+                    var dc = await dialogs.CreateContextAsync(turnContext, cancellationToken);
                     await dc.ContinueDialogAsync(cancellationToken);
                     if (!turnContext.Responded)
                     {
@@ -113,7 +111,7 @@ namespace EPiServer.Reference.Commerce.Bot
 
         private async Task<DialogContext> ProcessInputAsync(ITurnContext turnContext, CancellationToken cancellationToken)
         {
-            var dc = await _dialogs.CreateContextAsync(turnContext, cancellationToken);
+            var dc = await dialogs.CreateContextAsync(turnContext, cancellationToken);
             switch (turnContext.Activity.Text.ToLowerInvariant())
             {
                 case "signout":
@@ -155,7 +153,7 @@ namespace EPiServer.Reference.Commerce.Bot
                 // If we have the token use the user is authenticated so we may use it to make API calls.
                 if (tokenResponse?.Token != null)
                 {
-                    var parts = _stateAccessors.CommandState.GetAsync(step.Context, () => string.Empty, cancellationToken: cancellationToken).Result.Split(' ');
+                    var parts = stateAccessors.CommandState.GetAsync(step.Context, () => string.Empty, cancellationToken: cancellationToken).Result.Split(' ');
                     string command = parts[0].ToLowerInvariant();
 
                     if (command == "products")
@@ -175,7 +173,7 @@ namespace EPiServer.Reference.Commerce.Bot
                         await step.Context.SendActivityAsync($"Your token is: {tokenResponse.Token}", cancellationToken: cancellationToken);
                     }
 
-                    await _stateAccessors.CommandState.DeleteAsync(step.Context, cancellationToken);
+                    await stateAccessors.CommandState.DeleteAsync(step.Context, cancellationToken);
                 }
             }
             else
@@ -194,8 +192,8 @@ namespace EPiServer.Reference.Commerce.Bot
             if (activity.Type == ActivityTypes.Message &&
                 (!Regex.IsMatch(activity.Text, @"(\d{6})") || activity.Text.Contains("SKU")))
             {
-                await _stateAccessors.CommandState.SetAsync(step.Context, activity.Text, cancellationToken);
-                await _stateAccessors.UserState.SaveChangesAsync(step.Context, cancellationToken: cancellationToken);
+                await stateAccessors.CommandState.SetAsync(step.Context, activity.Text, cancellationToken);
+                await stateAccessors.UserState.SaveChangesAsync(step.Context, cancellationToken: cancellationToken);
             }
 
             return await step.BeginDialogAsync("loginPrompt", cancellationToken: cancellationToken);
