@@ -158,7 +158,7 @@ namespace EPiServer.Reference.Commerce.Bot
 
                     if (command == "products")
                     {
-                        await OAuthHelpers.ProductsAsync(step.Context, tokenResponse);
+                        await OAuthHelpers.ProductsAsync(step.Context, tokenResponse, parts.Length > 1 ? parts[1] : string.Empty);
                     }
                     else if (command.StartsWith("add"))
                     {

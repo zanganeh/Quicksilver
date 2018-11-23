@@ -396,6 +396,7 @@
     <Compile Include="Features\AddressBook\ViewModels\AddressCollectionViewModel.cs" />
     <Compile Include="Features\AddressBook\ViewModels\AddressViewModel.cs" />
     <Compile Include="Features\Api\Controller\CardController.cs" />
+    <Compile Include="Features\Api\Controller\ProductsController.cs" />
     <Compile Include="Features\Api\Model\AddCardResultMode.cs" />
     <Compile Include="Features\Cart\Extensions\CartExtensions.cs" />
     <Compile Include="Features\Cart\ViewModels\CartViewModelBase.cs" />

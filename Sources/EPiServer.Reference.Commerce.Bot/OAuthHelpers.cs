@@ -27,8 +27,7 @@ namespace EPiServer.Reference.Commerce.Bot
                 $"The {code} is being added to your card");
         }
 
-        // Displays information about the user in the bot.
-        public static async Task ProductsAsync(ITurnContext turnContext, TokenResponse tokenResponse)
+        public static async Task ProductsAsync(ITurnContext turnContext, TokenResponse tokenResponse, string query)
         {
             if (turnContext == null)
             {
@@ -40,9 +39,8 @@ namespace EPiServer.Reference.Commerce.Bot
                 throw new ArgumentNullException(nameof(tokenResponse));
             }
 
-            // Pull in the data from the Microsoft Graph.
             var client = new CommerceClient(tokenResponse.Token);
-            var products = await client.ProductsAsync();
+            var products = await client.ProductsAsync(query);
 
             var reply = turnContext.Activity.CreateReply();
 
