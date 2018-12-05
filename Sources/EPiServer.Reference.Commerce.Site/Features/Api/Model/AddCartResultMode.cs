@@ -1,8 +1,8 @@
 ﻿namespace EPiServer.Reference.Commerce.Site.Features.Api.Model
 {
-    public class AddCardResultMode
+    public class AddCartResultMode
     {
-        public AddCardResultMode()
+        public AddCartResultMode()
         {
             Successful = true;
         }

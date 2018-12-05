@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.Bot.Builder;
 using Microsoft.Bot.Builder.Dialogs;
@@ -8,7 +9,7 @@ namespace EPiServer.Reference.Commerce.Bot
 {
     public static class OAuthHelpers
     {
-        public static async Task AddToCardAsync(ITurnContext turnContext, TokenResponse tokenResponse, string code)
+        public static async Task AddToCartAsync(ITurnContext turnContext, TokenResponse tokenResponse, string code)
         {
             if (turnContext == null)
             {
@@ -20,11 +21,21 @@ namespace EPiServer.Reference.Commerce.Bot
                 throw new ArgumentNullException(nameof(tokenResponse));
             }
 
-            var client = new CommerceClient(tokenResponse.Token);
-            await client.AddToCardAsync(code);
+            var result = await new CommerceClient().AddToCarTAsync(tokenResponse.Token, code);
 
-            await turnContext.SendActivityAsync(
-                $"The {code} is being added to your card");
+            var message = string.Empty;
+
+            if (result.Successful)
+            {
+                message = $"The {code} is being added to your cart";
+            }
+
+            if (!string.IsNullOrWhiteSpace(result.WarningMessage))
+            {
+                message = $" with the warning: {result.WarningMessage}";
+            }
+
+            await turnContext.SendActivityAsync(message);
         }
 
         public static async Task ProductsAsync(ITurnContext turnContext, TokenResponse tokenResponse, string query)
@@ -39,8 +50,7 @@ namespace EPiServer.Reference.Commerce.Bot
                 throw new ArgumentNullException(nameof(tokenResponse));
             }
 
-            var client = new CommerceClient(tokenResponse.Token);
-            var products = await client.ProductsAsync(query);
+            var products = await new CommerceClient().ProductsAsync(tokenResponse.Token, query);
 
             var reply = turnContext.Activity.CreateReply();
 
@@ -49,7 +59,7 @@ namespace EPiServer.Reference.Commerce.Bot
             await turnContext.SendActivityAsync(reply);
         }
 
-        public static async Task CardAsync(ITurnContext turnContext, TokenResponse tokenResponse)
+        public static async Task CartAsync(ITurnContext turnContext, TokenResponse tokenResponse)
         {
             if (turnContext == null)
             {
@@ -61,12 +71,38 @@ namespace EPiServer.Reference.Commerce.Bot
                 throw new ArgumentNullException(nameof(tokenResponse));
             }
 
-            var client = new CommerceClient(tokenResponse.Token);
-            //var messages = await client.GetRecentMailAsync();
+            var cardItems = await new CommerceClient().CartAsync(tokenResponse.Token);
             var reply = turnContext.Activity.CreateReply();
-            
+
+            if (cardItems == null || !cardItems.Any())
+            {
+                reply.Text = "You cart is empty";
+            }
+            else
+            {
+                reply.Text = $"Your cart: {string.Join(",", cardItems.Select(item => $" code: {item.Code}, qty: {item.Quantity}"))}";
+            }
 
             await turnContext.SendActivityAsync(reply);
+        }
+
+        public static async Task CheckoutAsync(ITurnContext turnContext, TokenResponse tokenResponse)
+        {
+            if (turnContext == null)
+            {
+                throw new ArgumentNullException(nameof(turnContext));
+            }
+
+            if (tokenResponse == null)
+            {
+                throw new ArgumentNullException(nameof(tokenResponse));
+            }
+
+            var result = await new CommerceClient().CheckoutAsync(tokenResponse.Token);
+
+            var message = "Sucessfully checkout!";
+
+            await turnContext.SendActivityAsync(message);
         }
 
         public static OAuthPrompt Prompt(string connectionName)

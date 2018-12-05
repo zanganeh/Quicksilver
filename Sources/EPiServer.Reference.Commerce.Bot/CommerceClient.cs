@@ -1,45 +1,55 @@
-﻿using DalSoft.RestClient;
-using System;
+﻿using System;
 using System.Collections.Generic;
+using System.Linq;
+using System.Net;
 using System.Threading.Tasks;
+using EPiServer.Reference.Commerce.Bot.Extensions;
+using EPiServer.Reference.Commerce.Bot.Model;
+using EPiServer.Reference.Commerce.Bot.Models;
 
 namespace EPiServer.Reference.Commerce.Bot
 {
     public class CommerceClient
     {
-        private readonly string token;
-        private readonly string url = "http://localhost:50244/";
+        const string baseUrl = "http://localhost:50244";
 
-        public CommerceClient(string token)
+        public Task<AddCartResultMode> AddToCarTAsync(string token, string code)
         {
-            if (string.IsNullOrWhiteSpace(token))
-            {
-                throw new ArgumentNullException(nameof(token));
-            }
+            var commerceClient = GetAuthenticatedClient(token);
 
-            this.token = token;
+            return commerceClient.UploadTaskAsync<AddCartResultMode>($"{baseUrl}/api/cart/add?code={code}", string.Empty);
         }
 
-        public async Task AddToCardAsync(string code)
+        public async Task<IEnumerable<string>> ProductsAsync(string token, string query)
         {
-            var commerceClient = GetAuthenticatedClient();
+            var commerceClient = GetAuthenticatedClient(token);
 
-            var result = await commerceClient.api.card.add.Query(new { code }).Post();
+            var result = await commerceClient.DownloadDataTaskAsync(new Uri($"{baseUrl}/api/products/?q={query}"));
+
+            return Enumerable.Empty<string>();
         }
 
-        public async Task<IEnumerable<string>> ProductsAsync(string query)
+        public async Task<IEnumerable<CartItem>> CartAsync(string token)
         {
-            var commerceClient = GetAuthenticatedClient();
+            var client = GetAuthenticatedClient(token);
 
-            var result = await commerceClient.api.products.Query(new { q = query }).Get();
-
-            return result;
+            return (await client.DownloadTaskAsync<IEnumerable<CartItem>>($"{baseUrl}/api/cart")) ?? Enumerable.Empty<CartItem>();
         }
 
-        private dynamic GetAuthenticatedClient()
+        public Task<AddCartResultMode> CheckoutAsync(string token)
         {
-            dynamic client = new RestClient(url);
-            return client.Headers(new { Authorization = $"Bearer {token}" });
+            var commerceClient = GetAuthenticatedClient(token);
+
+            return commerceClient.UploadTaskAsync<AddCartResultMode>($"{baseUrl}/api/cart/checkout", string.Empty);
+        }
+
+        private WebClient GetAuthenticatedClient(string token)
+        {
+            var client = new WebClient();
+
+            client.Headers[HttpRequestHeader.Authorization] = $"Bearer {token}";
+
+            return client;
         }
     }
 }

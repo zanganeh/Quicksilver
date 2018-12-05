@@ -1,11 +1,11 @@
-﻿using System;
+﻿using Microsoft.Bot.Builder;
+using Microsoft.Bot.Builder.Dialogs;
+using Microsoft.Bot.Schema;
+using System;
 using System.Collections.Generic;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.Bot.Builder;
-using Microsoft.Bot.Builder.Dialogs;
-using Microsoft.Bot.Schema;
 
 namespace EPiServer.Reference.Commerce.Bot
 {
@@ -162,11 +162,15 @@ namespace EPiServer.Reference.Commerce.Bot
                     }
                     else if (command.StartsWith("add"))
                     {
-                        await OAuthHelpers.AddToCardAsync(step.Context, tokenResponse, parts[1]);
+                        await OAuthHelpers.AddToCartAsync(step.Context, tokenResponse, parts[1]);
                     }
-                    else if (command.StartsWith("card"))
+                    else if (command.StartsWith("cart"))
                     {
-                        await OAuthHelpers.CardAsync(step.Context, tokenResponse);
+                        await OAuthHelpers.CartAsync(step.Context, tokenResponse);
+                    }
+                    else if (command.StartsWith("checkout"))
+                    {
+                        await OAuthHelpers.CheckoutAsync(step.Context, tokenResponse);
                     }
                     else
                     {
